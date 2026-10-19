@@ -14,3 +14,4 @@ dependencies:
   - python-igraph
   - numba
   - openpyxl
+  - pyomo
