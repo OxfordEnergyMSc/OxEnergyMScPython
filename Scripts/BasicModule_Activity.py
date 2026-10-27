@@ -154,7 +154,7 @@ class Storage():
         self.max_soc = max_soc  # Maximum state of charge (kWh)
         self.min_soc = min_soc   # Minimum state of charge (kWh)
         self.max_power = max_power # Maximum power the battery can handle (kW)
-        self.efficiency = efficiency    # Base battery efficiency
+        self.bat_eff = efficiency    # Base battery efficiency
         self.soc_0 = soc_0  # Initial state of charge (kWh)
 
         # Initialize lists to track storage power and state of charge over time.
@@ -162,7 +162,7 @@ class Storage():
         self.soc_E = [self.soc_0] * self.T  # Initialize state of charge list
         
 
-    def storage_charge_action(self, demand_P, t):
+    def storage_charge_action(self, net_P, t):
         """
         This function decides if to charge or discharge a battery based on a 
         simple conditional battery model, within a single time period t of length dt.
@@ -171,8 +171,8 @@ class Storage():
         
         Parameters
         ----------
-        demand_P : float
-            The power demand (units of power e.g. kW)
+        net_P : float
+            The net power (demand - generation) at the current time step.
         t : int
             The current time period index.
             
@@ -192,23 +192,23 @@ class Storage():
             soc_prev = self.soc_E[t-1]
         
         # 5. Battery power  (discharge = negative, charge = positive)
-        if demand_P > 0:
+        if net_P > 0:
             # Case (a): discharge
-            self.bat_P[t] = ...  # TODO
-        elif demand_P < 0:
+            self.bat_P[t] = -min(net_P, self.max_power, self.bat_eff * (soc_prev - self.min_soc) / self.dt)
+        elif net_P < 0:
             # Case (b): charge
-            self.bat_P[t] = ...  # TODO
+            self.bat_P[t] = min(-net_P, self.max_power, (self.max_soc - soc_prev) / self.dt)
         else:
             # Case (c): no battery operation
             self.bat_P[t] = 0
     
         # 6. Update SoC (apply efficiency depending on charge/discharge)
         if self.bat_P[t] >= 0:
-            self.soc_E[t] = ...  # TODO charge
+            self.soc_E[t] = soc_prev + self.bat_eff * self.bat_P[t] * self.dt
         else:
-            self.soc_E[t] = ...  # TODO discharge
+            self.soc_E[t] = soc_prev + (self.bat_P[t] / self.bat_eff) * self.dt
     
-        result_net_P_t = ...  # TODO
+        result_net_P_t = net_P + self.bat_P[t]  # calculate the new net power by adding your battery power to the original net power
         
         
         return result_net_P_t
